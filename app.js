@@ -25,7 +25,7 @@ const index = new FlexSearch.Index({
 /**
  * Todo:
  *  Add breadcrumbs
- *      check if htmx has an event for window.location push (because search doesn't push)
+ *      check if htmx has an event for window.location push (because search doesn't push) htmx:beforeHistoryUpdate
  *      you could also add search actions to the history as well (search: keyword)
  *      appendChild every hx-post action to an element as a link above the content
  *      check children of the element and if it exists move it forward

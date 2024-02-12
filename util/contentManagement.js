@@ -92,7 +92,7 @@ function cleanActiveLinks(contentEl, filePath) {
  */
 exports.cleanAllContent = (req, res) => {
     console.log("CLEANUP");
-    let allowCleanup = true;
+    let allowCleanup = false;
     if(!allowCleanup) return;
     const pageCount = 2267;
     for (let i = 1; i <= pageCount; i++) {
