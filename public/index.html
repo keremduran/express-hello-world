@@ -67,9 +67,13 @@
 </div>
 <!-- End Top Background Image Wrapper -->
 <!-- Main -->
-<div class="wrapper row3">
+<div style="min-height: 95vh" class="wrapper row3">
     <main class="hoc container clear" hx-boost="true" hx-target=".content" hx-swap="outerHTML" hx-push-url="true">
         <!-- search -->
+        <div style="padding: 0 0 1rem 0">
+            <b>History</b>
+            <div id="history-container"></div>
+        </div>
         <div hx-push-url="false" style="padding-bottom: 1rem;">
             <input class="form-control" type="search" id="content-search"
                name="search" placeholder="Begin Typing To Search..."
@@ -105,21 +109,16 @@
 <!--        <div class="clear"></div>-->
     </main>
 </div>
-
-<div class="wrapper row4">
-    <footer id="footer" class="hoc clear">
-
-    </footer>
-</div>
-
 <div class="wrapper row5">
-    <div id="copyright" class="hoc clear">
-        <p class="fl_left">This material is COPYRIGHT © KING'S PRINTER FOR ONTARIO, 2008-2023</p>
-        <p class="fl_left">This site is not an offical copy or maintitned by the Government of Ontario.</p>
-        <p class="right"><a href="http://buildingCode.online">Buildingcode.Online</a></p>
-        <p class="fl_right"></p>
-        <!-- ################################################################################################ -->
-    </div>
+    <footer id="footer" class="hoc">
+        <div id="copyright" class="hoc clear">
+            <p class="fl_left">This material is COPYRIGHT © KING'S PRINTER FOR ONTARIO, 2008-2023</p>
+            <p class="fl_left">This site is not an offical copy or maintitned by the Government of Ontario.</p>
+            <p class="right"><a href="http://buildingCode.online">Buildingcode.Online</a></p>
+            <p class="fl_right"></p>
+            <!-- ################################################################################################ -->
+        </div>
+    </footer>
 </div>
 
 <a id="backtotop" href="#top"><i class="fa fa-chevron-up"></i></a>
@@ -133,6 +132,8 @@
     const pathName = window.location.pathname;
     if(pathName.length > 1) $content.setAttribute("hx-post", pathName);
 
+    const $historyContainer = document.querySelector("#history-container");
+
     const $contentSearch = document.querySelector('#content-search');
     const markInstance = new Mark("div.content");
     function highlightSearchValue() {
@@ -143,9 +144,82 @@
         }
     }
 
-    document.body.addEventListener('htmx:afterSwap', function(evt) {
+    document.body.addEventListener('htmx:afterSwap', function(e) {
         highlightSearchValue();
+        pushToHistory(e);
     });
+
+    const contentHistory = [];
+
+    function hxPost(path, searchValue) {
+        if(path === '/search') {
+            if(!searchValue) return;
+            htmx.ajax("POST", path, {
+                target: '#search-results',
+                swap: 'innerHTML',
+                values: {search: searchValue}
+            });
+        }
+        else {
+            htmx.ajax("POST", path, {
+                target: '.content',
+                swap: 'outerHTML'
+            });
+        }
+    }
+
+    function pushToHistory(e) {
+        const historyLink = (item, searchValue) => `
+            <a style="padding: 0.3rem 0" onclick="hxPost('${item.historyPath}', '${searchValue}')">
+                ${item.historyLabel}
+            </a>
+        `.trim();
+
+        const historyPath = e.detail.pathInfo.requestPath;
+
+
+        let historyLabel;
+
+        if(historyPath.indexOf('section') !== -1) {
+            // historyPath -> /sections/section1
+            historyLabel = historyPath.split("/")[2];
+        }
+        else if(historyPath.indexOf('content') !== -1) {
+            historyLabel = document.querySelector(".content .section-e b").innerText
+        }
+        else if(historyPath.indexOf('search') !== -1) {
+            const searchValue = e.detail.requestConfig.parameters.search;
+            historyLabel = 'search: ' + searchValue;
+        }
+        else {
+            return;
+        }
+
+        const existingItemIndex = contentHistory.findIndex(
+            item => item.historyPath === historyPath
+        );
+
+        if(existingItemIndex !== -1) {
+            const existingItem = contentHistory[existingItemIndex];
+            contentHistory.splice(existingItemIndex, 1);
+            console.log(existingItem)
+            contentHistory.push(existingItem);
+        }
+        else {
+            contentHistory.push({
+                historyLabel,
+                historyPath
+            });
+        }
+
+        const maxHistoryLength = 15;
+        const historyBegin = Math.max(contentHistory.length - maxHistoryLength, 0);
+
+        $historyContainer.innerHTML = contentHistory
+            .slice(historyBegin, contentHistory.length)
+            .map(historyLink)
+            .join(`<div style="display: inline-block; padding: 0 0.3rem">></div>`);
+    }
 </script>
 </body>
 </html>
