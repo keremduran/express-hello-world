@@ -5,17 +5,17 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 const port = process.env.PORT || 3001;
-const htmlParser = require("node-html-parser");
 const FlexSearch = require("flexsearch");
 const bodyParser = require("body-parser");
 
 const {cleanAllContent, scrape} = require("./util/contentManagement")
 const {flexSearchIndexAll} = require ("./util/flexSearch");
 const {masterIndex} = require("./data/masterIndex");
+const htmlParser = require("node-html-parser");
 
 app.use(express.static("public"));
-app.use(bodyParser.urlencoded({ extended: false })); // parse application/x-www-form-urlencoded
-app.use(bodyParser.json()); // parse application/json
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
 const index = new FlexSearch.Index({
     preset: "match",
@@ -112,6 +112,72 @@ app.post("/content/:id",
         sendPartialHTML(req, res, filePath);
     }
 );
+
+
+const addInternalLinks = () => {
+    const faultyPages = [];
+    let updatedFileCount = 0;
+
+    fs.readdir("views/content", (err, files) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+
+        files.forEach((file, index) => {
+            const id = file.replace(".html", ""); // remove the .html extension
+            const filePath = `views/content/${file}`;
+            let newContent;
+            fs.readFile(filePath, { encoding: "utf-8" }, (err, data) => {
+                if (err) {
+                    console.error(err);
+                    return;
+                }
+
+                const contentBeforeUpdate = htmlParser.parse(data).innerText.trim();
+
+                newContent = data;
+
+                masterIndex.forEach(contentInfo => {
+                    if (!contentInfo.id || contentInfo.id === id) return;
+                    if(contentInfo.code.split(".").length !== 5) return;
+
+                    const internalLink = `<a hx-post="/content/${contentInfo.id}">${contentInfo.code}</a>`
+
+                    newContent = newContent.replaceAll(contentInfo.code, internalLink);
+                });
+
+                const contentAfterUpdate = htmlParser.parse(newContent).innerText.trim();
+
+                if(contentAfterUpdate !== contentBeforeUpdate) {
+                    if(faultyPages.length === 6) {
+                        console.log({contentAfterUpdate, contentBeforeUpdate})
+                    }
+                    faultyPages.push(id);
+                }
+
+                fs.writeFile(filePath, newContent, (err) => {
+                    if (err) {
+                        // handle the error
+                        console.error(err);
+                    } else {
+                        // handle the success
+                        updatedFileCount++;
+                    }
+                });
+
+                if(index === files.length - 1) {
+                    console.log({faultyPages, updatedFileCount});
+                }
+            });
+
+        });
+    });
+}
+
+//addInternalLinks();
+
+
 
 const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 

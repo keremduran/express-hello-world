@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const htmlParser = require("node-html-parser");
 const https = require("https");
+const {masterIndex} = require("../data/masterIndex");
 
 const brokenLinkMap = {};
 const activeLinkMap = {};
