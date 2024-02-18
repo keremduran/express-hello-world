@@ -11,6 +11,7 @@ const bodyParser = require("body-parser");
 
 const {cleanAllContent, scrape} = require("./util/contentManagement")
 const {flexSearchIndexAll} = require ("./util/flexSearch");
+const {masterIndex} = require("./data/masterIndex");
 
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: false })); // parse application/x-www-form-urlencoded
@@ -24,12 +25,6 @@ const index = new FlexSearch.Index({
 
 /**
  * Todo:
- *  Add breadcrumbs
- *      check if htmx has an event for window.location push (because search doesn't push) htmx:beforeHistoryUpdate
- *      you could also add search actions to the history as well (search: keyword)
- *      appendChild every hx-post action to an element as a link above the content
- *      check children of the element and if it exists move it forward
- *      optional: make the items removable with x on the right corner
  *  Add links to content titles (hx-post)
  *      check if the page exists then add it
  *      check if it's the current page don't add it
@@ -81,30 +76,21 @@ app.post("/search", (req, res) => {
     let resultsHtml = "";
 
     results.forEach((resultId, index) => {
-        const filePath = path.join(__dirname, `views/content/${resultId}.html`);
+        const resultContent = masterIndex.find(content => content.id === resultId);
 
-        fs.readFile(filePath, { encoding: "utf-8" }, (err, data) => {
-            if (err) {
-                console.error(err);
-                return;
-            }
-
-            const content = htmlParser.parse(data).querySelector('.section-e b').innerText;
-
-            resultsHtml += `<a style="display: inline-block;" hx-post="/content/${resultId}">${content}</a>`;
-
-            if(index === results.length - 1) {
-                resultsHtml = searchResultDialog(resultsHtml);
-                res.send(resultsHtml);
-            }
-        });
+        resultsHtml += `
+            <a style="display: inline-block;" hx-post="/content/${resultId}">
+                ${resultContent.code} - ${resultContent.title}
+            </a>`;
     });
+
+    resultsHtml = searchResultDialog(resultsHtml);
+    res.send(resultsHtml);
 });
 
 
 app.get("/scrape", scrape);
 app.get("/cleanup", cleanAllContent);
-
 
 app.get("/*", (req, res) => {
         const filePath = path.join(__dirname, `public/index.html`);
@@ -129,5 +115,5 @@ app.post("/content/:id",
 
 const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 
-server.keepAliveTimeout = 0;
-server.headersTimeout = 0;
+server.keepAliveTimeout = 30 * 1000; // 30 seconds
+server.headersTimeout = 35 * 1000; // 35 seconds

@@ -71,7 +71,7 @@
     <main class="hoc container clear" hx-target=".content" hx-swap="outerHTML" hx-push-url="true">
         <!-- search -->
         <div style="padding-bottom: 0.5rem;">
-            <b>History </b><i>(Max 20 items)</i>
+            <b>History </b><i>(Max 10 items)</i>
             <a style="padding-left: 1rem" onclick="clearHistory()">Clear</a>
             <div style="min-height: 4rem" id="history-container"></div>
         </div>
@@ -190,7 +190,7 @@
                 contentHistory = JSON.parse(stContentHistory) || [];
             }
             catch (e) {
-                console.log(e);
+                console.error(e);
                 return;
             }
         }
@@ -226,9 +226,9 @@
         );
 
         if(existingItemIndex !== -1) {
+            // Pushes the existing item to the end
             const existingItem = contentHistory[existingItemIndex];
             contentHistory.splice(existingItemIndex, 1);
-            console.log(existingItem)
             contentHistory.push(existingItem);
         }
         else {
@@ -238,7 +238,7 @@
             });
         }
 
-        const maxHistoryLength = 20;
+        const maxHistoryLength = 10;
         const historyBegin = Math.max(contentHistory.length - maxHistoryLength, 0);
         const $historyContainer = document.querySelector("#history-container");
 
