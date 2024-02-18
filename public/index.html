@@ -70,9 +70,10 @@
 <div style="min-height: 95vh" class="wrapper row3">
     <main class="hoc container clear" hx-target=".content" hx-swap="outerHTML" hx-push-url="true">
         <!-- search -->
-        <div style="padding: 0 0 1rem 0">
-            <b>History</b>
-            <div id="history-container"></div>
+        <div style="padding-bottom: 0.5rem;">
+            <b>History </b><i>(Max 20 items)</i>
+            <a style="padding-left: 1rem" onclick="clearHistory()">Clear</a>
+            <div style="min-height: 4rem" id="history-container"></div>
         </div>
         <div hx-push-url="false" style="padding-bottom: 1rem;">
             <input class="form-control" type="search" id="content-search"
@@ -173,6 +174,12 @@
         }
     }
 
+    function clearHistory() {
+        localStorage.setItem('contentHistory', '');
+        const $historyContainer = document.querySelector("#history-container");
+        $historyContainer.innerHTML = "";
+    }
+
     function pushToHistory(e) {
         const stContentHistory = localStorage.getItem('contentHistory');
 
@@ -189,7 +196,8 @@
         }
 
         const historyLink = (item, searchValue) => `
-            <a style="padding: 0.3rem 0" onclick="hxPost('${item.historyPath}', '${searchValue}')">
+            <a
+                style="display: inline-block; padding: 0.5rem 0" onclick="hxPost('${item.historyPath}', '${searchValue}')">
                 ${item.historyLabel}
             </a>
         `.trim();
@@ -207,14 +215,14 @@
         }
         else if(historyPath.indexOf('search') !== -1) {
             const searchValue = e.detail.requestConfig.parameters.search;
-            historyLabel = 'search: ' + searchValue;
+            historyLabel = `${historyPath}: ` + searchValue;
         }
         else {
             return;
         }
 
         const existingItemIndex = contentHistory.findIndex(
-            item => item.historyPath === historyPath
+            item => item.historyLabel === historyLabel
         );
 
         if(existingItemIndex !== -1) {
@@ -230,10 +238,8 @@
             });
         }
 
-        const maxHistoryLength = 15;
+        const maxHistoryLength = 20;
         const historyBegin = Math.max(contentHistory.length - maxHistoryLength, 0);
-
-
         const $historyContainer = document.querySelector("#history-container");
 
         $historyContainer.innerHTML = contentHistory
