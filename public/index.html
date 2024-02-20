@@ -24,7 +24,7 @@
         }
     </style>
 </head>
-<body id="top" hx-boost="true" hx-target=".content" hx-swap="outerHTML" hx-push-url="true">
+<body id="top" hx-boost="true" hx-target=".content" hx-swap="outerHTML show:#history-section:top" hx-push-url="true">
 
 <!-- Top Background Image Wrapper -->
 <div class="bgded overlay" style="background-image:url('/images/banner.png');">
@@ -70,7 +70,7 @@
 <div style="min-height: 95vh" class="wrapper row3">
     <main class="hoc container clear">
         <!-- search -->
-        <div style="padding-bottom: 1rem;">
+        <div id="history-section" style="padding: 1rem 0;">
             <details open>
                 <summary style="cursor: pointer" >
                     <b>History </b><i>(Max 10 items)</i>
@@ -168,7 +168,7 @@
             });
         }
         else {
-            htmx.ajax("POST", path, {
+            htmx.ajax("GET", path, {
                 target: '.content',
                 swap: 'outerHTML'
             });
