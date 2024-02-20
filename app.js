@@ -23,6 +23,7 @@ const index = new FlexSearch.Index({
 
 /**
  * Todo:
+ *  include history when new link is added
  *  Add link to CAN/ULC
  *      regex search for CAN/ULC + standardscode
  *      opens external link in new tab
