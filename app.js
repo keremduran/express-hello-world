@@ -149,7 +149,7 @@ const addInternalLinks = () => {
                     if (!contentInfo.id || contentInfo.id === id) return;
                     if(contentInfo.code.split(".").length !== 5) return;
 
-                    const internalLink = `<a hx-post="/content/${contentInfo.id}">${contentInfo.code}</a>`
+                    const internalLink = `<a href="/content/${contentInfo.id}" title="${contentInfo.title}">${contentInfo.code}</a>`
 
                     newContent = newContent.replaceAll(contentInfo.code, internalLink);
                 });
