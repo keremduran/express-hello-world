@@ -71,13 +71,16 @@ app.get("/cleanup", cleanAllContent);
 app.get("/:type/:id", (req, res) => {
     let filePath;
 
-    if (req.rawHeaders.indexOf('HX-Request') === -1) {
-        filePath = path.join(__dirname, `public/index.html`);
-    }
-    else {
+    const isHXRequest = req.header("HX-Request");
+
+    if (isHXRequest) {
         const {id, type} = req.params;
         filePath = path.join(__dirname, `views/${type}/${id}.html`);
     }
+    else {
+        filePath = path.join(__dirname, `public/index.html`);
+    }
+
 
     res.sendFile(filePath, function (err) {
         if (!err) return;

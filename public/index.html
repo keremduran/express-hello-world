@@ -109,7 +109,7 @@
                 </ul>
             </nav>
         </div>
-        <div class="content three_quarter"></div>
+        <div class="content three_quarter" hx-trigger="load once" hx-get="/sections/section1"></div>
 <!--        <div class="clear"></div>-->
     </main>
 </div>
@@ -131,14 +131,14 @@
 <script src="../layout/scripts/jquery.backtotop.js"></script>
 <script src="../layout/scripts/jquery.mobilemenu.js"></script>
 <script>
-    // function preserveURL() {
-    //     // For page reload
-    //     const $content = document.querySelector(".content");
-    //     const pathName = window.location.pathname;
-    //     if(pathName.length > 1) $content.setAttribute("hx-get", pathName);
-    // }
-    //
-    // preserveURL();
+    function preserveURL() {
+        // For page reload
+        const $content = document.querySelector(".content");
+        const pathName = window.location.pathname;
+        if(pathName.length > 1) $content.setAttribute("hx-get", pathName);
+    }
+
+    preserveURL();
     function highlightSearchValue() {
         const $contentSearch = document.querySelector('#content-search');
 
