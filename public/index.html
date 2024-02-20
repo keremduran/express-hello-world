@@ -77,7 +77,7 @@
         <div id="history-section" style="padding: 1rem 0;">
             <details open>
                 <summary style="cursor: pointer" >
-                    <b>History </b><i>(Max 10 items)</i>
+                    <b>History </b>
                     <a style="padding-left: 1rem" onclick="clearHistory()">Clear</a>
                 </summary>
                 <div style="min-height: 4rem" id="history-container"></div>
@@ -128,7 +128,10 @@
         </div>
     </footer>
 </div>
-
+<a style="visibility: hidden" id="backtosection" href="/sections/section1">
+    <i class="fa fa-chevron-up"></i>
+    <span>Section 1</span>
+</a>
 <a id="backtotop" href="#top"><i class="fa fa-chevron-up"></i></a>
 <!-- JAVASCRIPTS -->
 <script src="../layout/scripts/jquery.min.js"></script>
@@ -160,7 +163,37 @@
     document.body.addEventListener('htmx:afterSwap', function(e) {
         highlightSearchValue();
         pushToHistory(e);
+        setBackToSectionLink(e);
     });
+
+    function setBackToSectionLink() {
+        const getBackToSectionLink = () => {
+            const contentTitle = document.querySelector(".content .section-e b")?.innerText;
+
+            if(contentTitle?.length === 0) return;
+
+            const sectionCode = contentTitle?.split(".")[0];
+
+            if(!sectionCode || isNaN(sectionCode) || Number(sectionCode) > 12) {
+                return;
+            }
+
+            return `<a id="backtosection" onclick="hxPost('/sections/section${sectionCode}')">
+                <i class="fa fa-arrow-left"></i>
+                <span>Section ${sectionCode}</span>
+            </a>`
+        }
+
+        let backToSectionLink = getBackToSectionLink();
+
+        if(!backToSectionLink) {
+            backToSectionLink = `<a style="visibility: hidden" id="backtosection" href="#"><i></i></a>`
+        }
+
+        const $backToSection = document.querySelector("#backtosection");
+
+        if($backToSection) $backToSection.outerHTML = backToSectionLink;
+    }
 
     function hxPost(path, searchValue) {
         if(path === '/search') {
@@ -221,7 +254,7 @@
         }
 
         const existingItemIndex = contentHistory.findIndex(
-            item => item.historyLabel === historyLabel
+            item => item?.historyLabel === historyLabel
         );
 
         if(existingItemIndex === -1) {
@@ -236,14 +269,17 @@
         const historyBegin = Math.max(contentHistory.length - maxHistoryLength, 0);
         const $historyContainer = document.querySelector("#history-container");
 
-        const historyLink = (item) => `
-            <a
-                title="${item.historyLabel}"
-                class="${historyLabel === item.historyLabel ? 'active-history-item' : ''}"
-                style="display: inline-block; padding: 0.5rem 0" onclick="hxPost('${item.historyPath}', '${item.searchValue}')">
-                ${item.historyLabel.substring(0, 40)}${item.historyLabel.length > 40 ? "..." : ""}
-            </a>
-        `.trim();
+        const historyLink = (item) => {
+            if(!item || !item.historyLabel || !item.historyPath) return;
+            return `
+                <a
+                    title="${item?.historyLabel}"
+                    class="${historyLabel === item?.historyLabel ? 'active-history-item' : ''}"
+                    style="display: inline-block; padding: 0.5rem 0" onclick="hxPost('${item?.historyPath}', '${item?.searchValue}')">
+                    ${item?.historyLabel?.substring(0, 40)}${item?.historyLabel.length > 40 ? "..." : ""}
+                </a>
+            `.trim()
+        };
 
         $historyContainer.innerHTML = contentHistory
             .slice(historyBegin, contentHistory.length)
