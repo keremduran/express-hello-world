@@ -92,11 +92,16 @@ app.post("/search", (req, res) => {
 app.get("/scrape", scrape);
 app.get("/cleanup", cleanAllContent);
 
-app.get("/*", (req, res) => {
-        const filePath = path.join(__dirname, `public/index.html`);
-
-        console.log(req.rawHeaders);
-        res.sendFile(filePath);
+app.get("/:type/:id", (req, res) => {
+        if (req.rawHeaders.indexOf('HX-Request') === -1) {
+            const filePath = path.join(__dirname, `public/index.html`);
+            res.sendFile(filePath);
+        }
+        else {
+            const {id, type} = req.params;
+            const filePath = path.join(__dirname, `views/${type}/${id}.html`);
+            sendPartialHTML(req, res, filePath);
+        }
     }
 );
 
