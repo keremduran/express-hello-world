@@ -70,10 +70,14 @@
 <div style="min-height: 95vh" class="wrapper row3">
     <main class="hoc container clear">
         <!-- search -->
-        <div style="padding-bottom: 0.5rem;">
-            <b>History </b><i>(Max 10 items)</i>
-            <a style="padding-left: 1rem" onclick="clearHistory()">Clear</a>
-            <div style="min-height: 4rem" id="history-container"></div>
+        <div style="padding-bottom: 1rem;">
+            <details open>
+                <summary style="cursor: pointer" >
+                    <b>History </b><i>(Max 10 items)</i>
+                    <a style="padding-left: 1rem" onclick="clearHistory()">Clear</a>
+                </summary>
+                <div style="min-height: 4rem" id="history-container"></div>
+            </details>
         </div>
         <div hx-push-url="false" style="padding-bottom: 1rem;">
             <input class="form-control" type="search" id="content-search"
@@ -127,6 +131,14 @@
 <script src="../layout/scripts/jquery.backtotop.js"></script>
 <script src="../layout/scripts/jquery.mobilemenu.js"></script>
 <script>
+    function preserveURL() {
+        // For page reload
+        const $content = document.querySelector(".content");
+        const pathName = window.location.pathname;
+        if(pathName.length > 1) $content.setAttribute("hx-get", pathName);
+    }
+
+    preserveURL();
     function highlightSearchValue() {
         const $contentSearch = document.querySelector('#content-search');
 

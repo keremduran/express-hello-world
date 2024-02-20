@@ -2,7 +2,6 @@ const {searchResultDialog} = require ("./views/partials/SearchResultDialog");
 
 const express = require("express");
 const path = require('path');
-const fs = require('fs');
 const app = express();
 const port = process.env.PORT || 3001;
 const FlexSearch = require("flexsearch");
@@ -11,7 +10,6 @@ const bodyParser = require("body-parser");
 const {cleanAllContent, scrape} = require("./util/contentManagement")
 const {flexSearchIndexAll} = require ("./util/flexSearch");
 const {masterIndex} = require("./data/masterIndex");
-const htmlParser = require("node-html-parser");
 
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -25,7 +23,6 @@ const index = new FlexSearch.Index({
 
 /**
  * Todo:
- *  Add hide/show to the history
  *  Add link to CAN/ULC
  *      regex search for CAN/ULC + standardscode
  *      opens external link in new tab
