@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const htmlParser = require("node-html-parser");
 const https = require("https");
+const {masterIndex} = require("../data/masterIndex");
 
 const brokenLinkMap = {};
 const activeLinkMap = {};
@@ -159,3 +160,67 @@ exports.scrape = () => {
 
     res.type("html").send("<div>SCRAPING BRO</div>");
 }
+
+
+const addInternalLinks = () => {
+    const faultyPages = [];
+    let updatedFileCount = 0;
+
+    fs.readdir("views/content", (err, files) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+
+        files.forEach((file, index) => {
+            const id = file.replace(".html", ""); // remove the .html extension
+            const filePath = `views/content/${file}`;
+            let newContent;
+            fs.readFile(filePath, { encoding: "utf-8" }, (err, data) => {
+                if (err) {
+                    console.error(err);
+                    return;
+                }
+
+                const contentBeforeUpdate = htmlParser.parse(data).innerText.trim();
+
+                newContent = data;
+
+                masterIndex.forEach(contentInfo => {
+                    if (!contentInfo.id || contentInfo.id === id) return;
+                    if(contentInfo.code.split(".").length !== 5) return;
+
+                    const internalLink = `<a href="/content/${contentInfo.id}" title="${contentInfo.title}">${contentInfo.code}</a>`
+
+                    newContent = newContent.replaceAll(contentInfo.code, internalLink);
+                });
+
+                const contentAfterUpdate = htmlParser.parse(newContent).innerText.trim();
+
+                if(contentAfterUpdate !== contentBeforeUpdate) {
+                    if(faultyPages.length === 6) {
+                        console.log({contentAfterUpdate, contentBeforeUpdate})
+                    }
+                    faultyPages.push(id);
+                }
+
+                fs.writeFile(filePath, newContent, (err) => {
+                    if (err) {
+                        // handle the error
+                        console.error(err);
+                    } else {
+                        // handle the success
+                        updatedFileCount++;
+                    }
+                });
+
+                if(index === files.length - 1) {
+                    console.log({faultyPages, updatedFileCount});
+                }
+            });
+
+        });
+    });
+}
+
+// addInternalLinks();

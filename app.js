@@ -2,10 +2,8 @@ const {searchResultDialog} = require ("./views/partials/SearchResultDialog");
 
 const express = require("express");
 const path = require('path');
-const fs = require('fs');
 const app = express();
 const port = process.env.PORT || 3001;
-const htmlParser = require("node-html-parser");
 const FlexSearch = require("flexsearch");
 const bodyParser = require("body-parser");
 
@@ -14,8 +12,8 @@ const {flexSearchIndexAll} = require ("./util/flexSearch");
 const {masterIndex} = require("./data/masterIndex");
 
 app.use(express.static("public"));
-app.use(bodyParser.urlencoded({ extended: false })); // parse application/x-www-form-urlencoded
-app.use(bodyParser.json()); // parse application/json
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
 const index = new FlexSearch.Index({
     preset: "match",
@@ -25,9 +23,7 @@ const index = new FlexSearch.Index({
 
 /**
  * Todo:
- *  Add links to content titles (hx-post)
- *      check if the page exists then add it
- *      check if it's the current page don't add it
+ * Bugfix: why is 2236 missing? https://www.buildingcode.online/2236.html
  *  Add link to CAN/ULC
  *      regex search for CAN/ULC + standardscode
  *      opens external link in new tab
@@ -37,25 +33,6 @@ const index = new FlexSearch.Index({
  */
 
 flexSearchIndexAll(index);
-
-const sendPartialHTML = (req, res, filePath) => {
-
-    if(!filePath) {
-        console.error("FILEPATH IS REQUIRED");
-        return;
-    }
-
-    fs.readFile(filePath, { encoding: "utf-8" }, (err, data) => {
-        if (err) {
-            console.error(err);
-            // const filePath = path.join(__dirname, `views/error/not-found.html`);
-            // sendHtml(req, res, filePath);
-            res.type("html").send("<div>Not found.</div>");
-        } else {
-            res.type("html").send(data);
-        }
-    });
-}
 
 app.post("/search", (req, res) => {
     const query = req.body.search;
@@ -79,7 +56,7 @@ app.post("/search", (req, res) => {
         const resultContent = masterIndex.find(content => content.id === resultId);
 
         resultsHtml += `
-            <a style="display: inline-block;" hx-post="/content/${resultId}">
+            <a style="display: inline-block;" href="/content/${resultId}" title="${resultContent.title}">
                 ${resultContent.code} - ${resultContent.title}
             </a>`;
     });
@@ -88,30 +65,31 @@ app.post("/search", (req, res) => {
     res.send(resultsHtml);
 });
 
-
 app.get("/scrape", scrape);
 app.get("/cleanup", cleanAllContent);
 
-app.get("/*", (req, res) => {
-        const filePath = path.join(__dirname, `public/index.html`);
+app.get("/:type/:id", (req, res) => {
+    let filePath;
+
+    const isHXRequest = req.header("HX-Request");
+
+    if (isHXRequest) {
+        const {id, type} = req.params;
+        filePath = path.join(__dirname, `views/${type}/${id}.html`);
+    }
+    else {
+        filePath = path.join(__dirname, `public/index.html`);
+    }
+
+
+    res.sendFile(filePath, function (err) {
+        if (!err) return;
+
+        console.error("Page not found", err);
+        const filePath = path.join(__dirname, `views/error/not-found.html`);
         res.sendFile(filePath);
-    }
-);
-
-app.post("/sections/:id", (req, res) => {
-        const id = req.params.id;
-        const filePath = path.join(__dirname, `views/sections/${id}.html`);
-        sendPartialHTML(req, res, filePath);
-    }
-);
-
-app.post("/content/:id",
-    (req, res) => {
-        const id = req.params.id;
-        const filePath = path.join(__dirname, `views/content/${id}.html`);
-        sendPartialHTML(req, res, filePath);
-    }
-);
+    });
+});
 
 const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 

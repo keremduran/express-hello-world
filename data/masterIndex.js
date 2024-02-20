@@ -15,11 +15,6 @@ function convertLinksToArray(links) {
 
 const masterIndex = [
     {
-        "id": "1",
-        "title": "",
-        "code": "-"
-    },
-    {
         "id": "2",
         "title": "Application",
         "code": "1.1.1.1."
