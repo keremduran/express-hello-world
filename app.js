@@ -25,9 +25,7 @@ const index = new FlexSearch.Index({
 
 /**
  * Todo:
- *  Add links to content titles (hx-post)
- *      check if the page exists then add it
- *      check if it's the current page don't add it
+ *  Add hide/show to the history
  *  Add link to CAN/ULC
  *      regex search for CAN/ULC + standardscode
  *      opens external link in new tab
@@ -37,25 +35,6 @@ const index = new FlexSearch.Index({
  */
 
 flexSearchIndexAll(index);
-
-const sendPartialHTML = (req, res, filePath) => {
-
-    if(!filePath) {
-        console.error("FILEPATH IS REQUIRED");
-        return;
-    }
-
-    fs.readFile(filePath, { encoding: "utf-8" }, (err, data) => {
-        if (err) {
-            console.error(err);
-            // const filePath = path.join(__dirname, `views/error/not-found.html`);
-            // sendHtml(req, res, filePath);
-            res.type("html").send("<div>Not found.</div>");
-        } else {
-            res.type("html").send(data);
-        }
-    });
-}
 
 app.post("/search", (req, res) => {
     const query = req.body.search;
@@ -79,7 +58,7 @@ app.post("/search", (req, res) => {
         const resultContent = masterIndex.find(content => content.id === resultId);
 
         resultsHtml += `
-            <a style="display: inline-block;" hx-post="/content/${resultId}">
+            <a style="display: inline-block;" href="/content/${resultId}" title="${resultContent.title}">
                 ${resultContent.code} - ${resultContent.title}
             </a>`;
     });
@@ -88,103 +67,28 @@ app.post("/search", (req, res) => {
     res.send(resultsHtml);
 });
 
-
 app.get("/scrape", scrape);
 app.get("/cleanup", cleanAllContent);
 
 app.get("/:type/:id", (req, res) => {
-        if (req.rawHeaders.indexOf('HX-Request') === -1) {
-            const filePath = path.join(__dirname, `public/index.html`);
-            res.sendFile(filePath);
-        }
-        else {
-            const {id, type} = req.params;
-            const filePath = path.join(__dirname, `views/${type}/${id}.html`);
-            sendPartialHTML(req, res, filePath);
-        }
+    let filePath;
+
+    if (req.rawHeaders.indexOf('HX-Request') === -1) {
+        filePath = path.join(__dirname, `public/index.html`);
     }
-);
-
-app.post("/sections/:id", (req, res) => {
-        const id = req.params.id;
-        const filePath = path.join(__dirname, `views/sections/${id}.html`);
-        sendPartialHTML(req, res, filePath);
+    else {
+        const {id, type} = req.params;
+        filePath = path.join(__dirname, `views/${type}/${id}.html`);
     }
-);
 
-app.post("/content/:id",
-    (req, res) => {
-        const id = req.params.id;
-        const filePath = path.join(__dirname, `views/content/${id}.html`);
-        sendPartialHTML(req, res, filePath);
-    }
-);
+    res.sendFile(filePath, function (err) {
+        if (!err) return;
 
-
-const addInternalLinks = () => {
-    const faultyPages = [];
-    let updatedFileCount = 0;
-
-    fs.readdir("views/content", (err, files) => {
-        if (err) {
-            console.error(err);
-            return;
-        }
-
-        files.forEach((file, index) => {
-            const id = file.replace(".html", ""); // remove the .html extension
-            const filePath = `views/content/${file}`;
-            let newContent;
-            fs.readFile(filePath, { encoding: "utf-8" }, (err, data) => {
-                if (err) {
-                    console.error(err);
-                    return;
-                }
-
-                const contentBeforeUpdate = htmlParser.parse(data).innerText.trim();
-
-                newContent = data;
-
-                masterIndex.forEach(contentInfo => {
-                    if (!contentInfo.id || contentInfo.id === id) return;
-                    if(contentInfo.code.split(".").length !== 5) return;
-
-                    const internalLink = `<a href="/content/${contentInfo.id}" title="${contentInfo.title}">${contentInfo.code}</a>`
-
-                    newContent = newContent.replaceAll(contentInfo.code, internalLink);
-                });
-
-                const contentAfterUpdate = htmlParser.parse(newContent).innerText.trim();
-
-                if(contentAfterUpdate !== contentBeforeUpdate) {
-                    if(faultyPages.length === 6) {
-                        console.log({contentAfterUpdate, contentBeforeUpdate})
-                    }
-                    faultyPages.push(id);
-                }
-
-                fs.writeFile(filePath, newContent, (err) => {
-                    if (err) {
-                        // handle the error
-                        console.error(err);
-                    } else {
-                        // handle the success
-                        updatedFileCount++;
-                    }
-                });
-
-                if(index === files.length - 1) {
-                    console.log({faultyPages, updatedFileCount});
-                }
-            });
-
-        });
+        console.error("Page not found", err);
+        const filePath = path.join(__dirname, `views/error/not-found.html`);
+        res.sendFile(filePath);
     });
-}
-
-//addInternalLinks();
-
-
+});
 
 const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 

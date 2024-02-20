@@ -200,7 +200,7 @@
             historyLabel = historyPath.split("/")[2];
         }
         else if(historyPath.indexOf('content') !== -1) {
-            historyLabel = document.querySelector(".content .section-e b").innerText
+            historyLabel = document.querySelector(".content .section-e b")?.innerText
         }
         else if(historyPath.indexOf('search') !== -1) {
             const searchValue = e.detail.requestConfig.parameters.search;
