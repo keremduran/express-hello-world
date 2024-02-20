@@ -22,6 +22,10 @@
         .highlight {
             background-color: #FFFF00;
         }
+
+        .active-history-item {
+            box-shadow: 0 4px 6px -6px rgb(254, 0, 0);
+        }
     </style>
 </head>
 <body id="top" hx-boost="true" hx-target=".content" hx-swap="outerHTML show:#history-section:top" hx-push-url="true">
@@ -196,16 +200,10 @@
             }
         }
 
-        const historyLink = (item, searchValue) => `
-            <a
-                style="display: inline-block; padding: 0.5rem 0" onclick="hxPost('${item.historyPath}', '${searchValue}')">
-                ${item.historyLabel}
-            </a>
-        `.trim();
-
         const historyPath = e.detail.pathInfo.requestPath;
 
         let historyLabel;
+        let searchValue;
 
         if(historyPath.indexOf('section') !== -1) {
             // historyPath -> /sections/section1
@@ -215,7 +213,7 @@
             historyLabel = document.querySelector(".content .section-e b")?.innerText
         }
         else if(historyPath.indexOf('search') !== -1) {
-            const searchValue = e.detail.requestConfig.parameters.search;
+            searchValue = e.detail.requestConfig.parameters.search;
             historyLabel = `${historyPath}: ` + searchValue;
         }
         else {
@@ -226,22 +224,26 @@
             item => item.historyLabel === historyLabel
         );
 
-        if(existingItemIndex !== -1) {
-            // Pushes the existing item to the end
-            const existingItem = contentHistory[existingItemIndex];
-            contentHistory.splice(existingItemIndex, 1);
-            contentHistory.push(existingItem);
-        }
-        else {
+        if(existingItemIndex === -1) {
             contentHistory.push({
                 historyLabel,
-                historyPath
+                historyPath,
+                searchValue
             });
         }
 
         const maxHistoryLength = 10;
         const historyBegin = Math.max(contentHistory.length - maxHistoryLength, 0);
         const $historyContainer = document.querySelector("#history-container");
+
+        const historyLink = (item) => `
+            <a
+                title="${item.historyLabel}"
+                class="${historyLabel === item.historyLabel ? 'active-history-item' : ''}"
+                style="display: inline-block; padding: 0.5rem 0" onclick="hxPost('${item.historyPath}', '${item.searchValue}')">
+                ${item.historyLabel.substring(0, 40)}${item.historyLabel.length > 40 ? "..." : ""}
+            </a>
+        `.trim();
 
         $historyContainer.innerHTML = contentHistory
             .slice(historyBegin, contentHistory.length)
