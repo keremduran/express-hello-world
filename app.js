@@ -94,6 +94,8 @@ app.get("/cleanup", cleanAllContent);
 
 app.get("/*", (req, res) => {
         const filePath = path.join(__dirname, `public/index.html`);
+
+        console.log(req.rawHeaders);
         res.sendFile(filePath);
     }
 );
