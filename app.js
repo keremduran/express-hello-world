@@ -10,6 +10,8 @@ const bodyParser = require("body-parser");
 const {cleanAllContent, scrape} = require("./util/contentManagement")
 const {flexSearchIndexAll} = require ("./util/flexSearch");
 const {masterIndex} = require("./data/masterIndex");
+const htmlParser = require("node-html-parser");
+const fs = require("fs");
 
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -90,6 +92,87 @@ app.get("/:type/:id", (req, res) => {
         res.sendFile(filePath);
     });
 });
+
+const addInternalLinks = (contentEl, fileId, faultyPages) => {
+    let newContent;
+
+    //const contentEl = htmlParser.parse(data);
+
+    // This must be called AFTER cleaning all the active links.
+    if(contentEl.querySelectorAll("a").length > 0) return;
+
+    const contentBeforeUpdate = contentEl.innerText.trim();
+
+    newContent = contentEl.outerHTML;
+
+    masterIndex.forEach(contentInfo => {
+        if (!contentInfo.id || contentInfo.id === fileId) return;
+        if(contentInfo.code.split(".").length !== 5) return;
+
+        const internalLink = `<a href="/content/${contentInfo.id}" title="${contentInfo.title}">${contentInfo.code}</a>`
+
+        newContent = newContent.replaceAll(contentInfo.code, internalLink);
+    });
+
+    const contentAfterUpdate = htmlParser.parse(newContent).innerText.trim();
+
+    if(contentAfterUpdate !== contentBeforeUpdate) {
+        if(faultyPages.length === 6) {
+            console.log({contentAfterUpdate, contentBeforeUpdate})
+        }
+        faultyPages.push(fileId);
+    }
+
+    return newContent;
+}
+
+
+const addInternalLinksToAllPages = () => {
+    const faultyPages = [];
+    let updatedFileCount = 0;
+
+    fs.readdir("views/content", (err, files) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+
+        files.forEach((file, index) => {
+            const id = file.replace(".html", ""); // remove the .html extension
+            const filePath = `views/content/${file}`;
+
+            fs.readFile(filePath, { encoding: "utf-8" }, (err, data) => {
+                if (err) {
+                    console.error(err);
+                    return;
+                }
+
+                const contentEl = htmlParser.parse(data);
+                let newContent = addInternalLinks(contentEl, id, faultyPages);
+
+                if(!newContent) return;
+
+                fs.writeFile(filePath, newContent, (err) => {
+                    if (err) {
+                        // handle the error
+                        console.error(err);
+                    } else {
+                        // handle the success
+                        updatedFileCount++;
+                    }
+                });
+
+                if(index === files.length - 1) {
+                    console.log({faultyPages, updatedFileCount});
+                }
+            });
+
+        });
+    });
+}
+
+
+// addInternalLinksToAllPages();
 
 const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 
