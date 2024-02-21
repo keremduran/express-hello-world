@@ -25,7 +25,6 @@ const index = new FlexSearch.Index({
 
 /**
  * Todo:
- * Bugfix: why is 2236 missing? https://www.buildingcode.online/2236.html
  *  Add link to CAN/ULC
  *      regex search for CAN/ULC + standardscode
  *      opens external link in new tab
