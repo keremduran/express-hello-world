@@ -111,6 +111,10 @@ const addInternalLinks = (contentEl, fileId, faultyPages) => {
 
         const internalLink = `<a href="/content/${contentInfo.id}" title="${contentInfo.title}">${contentInfo.code}</a>`
 
+        // Todo: Try the following instead
+        // let regex = new RegExp("\\b" + contentInfo.code + "\\b");
+        // const array = [...newContent.matchAll(regex)];
+
         newContent = newContent.replaceAll(contentInfo.code, internalLink);
     });
 
