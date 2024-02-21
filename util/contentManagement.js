@@ -139,6 +139,9 @@ exports.scrape = (req, res) => {
     const allowOverride = false;
     let allowScrape = true;
     if (!allowScrape) return;
+
+    const faultyPages = [];
+
     for (let i = 0; i < 2269; i++) {
         const fileName = `${i}.html`;
         const url = "https://www.buildingcode.online/" + fileName;
@@ -161,16 +164,21 @@ exports.scrape = (req, res) => {
             });
 
             res.on('end', () => {
-                // const contentEl = htmlParser
-                //     .parse(Buffer.concat(data).toString())
-                //     .querySelector(".content");
-                //
-                // const contentNoLinks = cleanActiveLinks(contentEl);
-                // const contentNoBrokenLinks = cleanBrokenLinks(contentNoLinks);
-                // const contentWithInternalLinks = addInternalLinks(contentNoBrokenLinks);
-                // fs.writeFileSync(filePath, contentNoBrokenLinks.outerHTML);
+                let $content = htmlParser
+                    .parse(Buffer.concat(data).toString())
+                    .querySelector(".content");
 
-                //console.log('Response ended.', filePath);
+                if(!$content) return;
+
+                $content = cleanActiveLinks($content) || $content;
+
+                $content = cleanBrokenLinks($content) || $content ;
+
+                $content = addInternalLinks($content, i, faultyPages) || $content;
+
+                fs.writeFileSync(filePath, $content.outerHTML);
+
+                console.log('Response ended.', filePath);
             });
         }).on('error', err => {
             console.log('Error: ', err.message);
@@ -198,7 +206,7 @@ const addInternalLinks = (contentEl, fileId, faultyPages) => {
 
     const contentBeforeUpdate = contentEl.innerText.trim();
 
-    newContent = data;
+    newContent = contentEl.outerHTML;
 
     masterIndex.forEach(contentInfo => {
         if (!contentInfo.id || contentInfo.id === fileId) return;
@@ -206,10 +214,16 @@ const addInternalLinks = (contentEl, fileId, faultyPages) => {
 
         const internalLink = `<a href="/content/${contentInfo.id}" title="${contentInfo.title}">${contentInfo.code}</a>`
 
-        newContent = newContent.replaceAll(contentInfo.code, internalLink);
+        const code = contentInfo.code.replace(/\./g, "\\.");
+
+        let regex = new RegExp("\\b" + code, "g"); // escape the dot with a backslash
+
+        newContent = newContent.replace(regex, internalLink);
     });
 
-    const contentAfterUpdate = htmlParser.parse(newContent).innerText.trim();
+    const contentElAfterUpdate = htmlParser.parse(newContent);
+
+    const contentAfterUpdate = contentElAfterUpdate.innerText.trim();
 
     if(contentAfterUpdate !== contentBeforeUpdate) {
         if(faultyPages.length === 6) {
@@ -218,7 +232,7 @@ const addInternalLinks = (contentEl, fileId, faultyPages) => {
         faultyPages.push(fileId);
     }
 
-    return newContent;
+    return htmlParser.parse(newContent);
 }
 
 
