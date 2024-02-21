@@ -8,10 +8,13 @@ const {masterIndex} = require("../data/masterIndex");
 const brokenLinkMap = {};
 const activeLinkMap = {};
 
-function cleanBrokenLinks(contentEl, filePath) {
+/**
+ *
+ * @param {HTMLElement} contentEl
+ * @returns {*}
+ */
+function cleanBrokenLinks(contentEl) {
     // Bing chat magic... also this website explains it a bit https://regexr.com/
-    //const brokenLinksPattern1 = /(\s*http:[^"]+)"\s*title\s*=\s*"([^"]+)"*>/g;
-    //const brokenLinksPattern2 = /(\w+)\s*=\s*"([^"]+)"\s*title\s*=\s*"([^"]+)"*>/g;
     const brokenLinksPattern = /(\w+)\s*=\s*"([^"]+)"\s*title\s*=\s*"([^"]+)"*>|(\s*http:[^"]+)"\s*title\s*=\s*"([^"]+)"*>/g;
     //
     // const brokenLinkMap = {
@@ -27,13 +30,11 @@ function cleanBrokenLinks(contentEl, filePath) {
     //     'preventing ="http://thehandyforce.com/interior/bathroom-renovations/" title ="Toronto Bathroom renovation inspiration">': 1,
     //     'subflooring="http://thehandyforce.com/flooring/" title ="Handyman flooring install Toronto">': 13,
     //     'Subflooring="http://thehandyforce.com/flooring/" title ="Handyman flooring install Toronto">': 4
-    // }
-
     // /(\w+)\s*=\s*"([^"]+)"\s*title\s*=\s*"([^"]+)"*>/g
     // for -> venting ="http://thehandyforce.com/interior/bathroom-renovations/" title ="Toronto Bathroom renovation inspiration">
-
     // /(\s*http:[^"]+)"\s*title\s*=\s*"([^"]+)"*>/g;
     // for -> http://thehandyforce.com/interior/bathroom-renovations/" title ="Toronto Bathroom renovation inspiration">
+    // }
 
     const brokenLinkFound = brokenLinksPattern.test(contentEl.textContent);
 
@@ -48,16 +49,20 @@ function cleanBrokenLinks(contentEl, filePath) {
         }
     });
 
-    if(!brokenLinkFound) return;
+    if(!brokenLinkFound) return contentEl;
 
-    const content = contentEl.innerHTML;
+    contentEl.innerHTML = contentEl.innerHTML.replaceAll(brokenLinksPattern, "");
     // Replace matches with an empty string
 
-    const cleanedHTML = content.replaceAll(brokenLinksPattern, "");
-
-    fs.writeFileSync(filePath, cleanedHTML);
+    return contentEl;
 }
-function cleanActiveLinks(contentEl, filePath) {
+
+/**
+ *
+ * @param {HTMLElement} contentEl
+ * @returns {*}
+ */
+function cleanActiveLinks(contentEl) {
     // Define the regex pattern
     const links = contentEl.querySelectorAll("a");
 
@@ -83,7 +88,7 @@ function cleanActiveLinks(contentEl, filePath) {
         contentEl.innerHTML = contentEl.innerHTML.replaceAll(linkHTML, textContent);
     });
 
-    fs.writeFileSync(filePath, contentEl.innerHTML);
+    return contentEl;
 }
 
 /**
@@ -109,8 +114,10 @@ exports.cleanAllContent = (req, res) => {
             const contentEl = htmlParser.parse(data);
 
             try {
-                cleanActiveLinks(contentEl, filePath);
-                cleanBrokenLinks(contentEl, filePath);
+                const contentNoLinks = cleanActiveLinks(contentEl, filePath);
+                const contentNoBrokenLinks = cleanBrokenLinks(contentNoLinks, filePath);
+
+                fs.writeFileSync(filePath, contentNoBrokenLinks.innerHTML);
             }
             catch (e) {
                 console.error(e);
@@ -127,12 +134,25 @@ exports.cleanAllContent = (req, res) => {
     }
 }
 
-exports.scrape = () => {
-    let allowScrape = false;
+exports.scrape = (req, res) => {
+    console.log("SCRAPING")
+    const allowOverride = false;
+    let allowScrape = true;
     if (!allowScrape) return;
-    for (let i = 1000; i < 2269; i++) {
+
+    const faultyPages = [];
+
+    for (let i = 0; i < 2269; i++) {
         const fileName = `${i}.html`;
         const url = "https://www.buildingcode.online/" + fileName;
+        const filePath = `views/content/${fileName}`;
+
+        if (fs.existsSync(filePath) && !allowOverride) {
+            continue;
+        }
+        else {
+            console.log(filePath);
+        }
 
         https.get(url, res => {
             let data = [];
@@ -144,13 +164,21 @@ exports.scrape = () => {
             });
 
             res.on('end', () => {
-                const contentHtml = htmlParser
+                let $content = htmlParser
                     .parse(Buffer.concat(data).toString())
-                    .querySelector(".content").outerHTML;
+                    .querySelector(".content");
 
-                fs.writeFileSync(`views/content/${fileName}`, contentHtml);
+                if(!$content) return;
 
-                console.log('Response ended: ', contentHtml);
+                $content = cleanActiveLinks($content) || $content;
+
+                $content = cleanBrokenLinks($content) || $content ;
+
+                $content = addInternalLinks($content, i, faultyPages) || $content;
+
+                fs.writeFileSync(filePath, $content.outerHTML);
+
+                console.log('Response ended.', filePath);
             });
         }).on('error', err => {
             console.log('Error: ', err.message);
@@ -161,8 +189,54 @@ exports.scrape = () => {
     res.type("html").send("<div>SCRAPING BRO</div>");
 }
 
+/**
+ *
+ * @param {HTMLElement} contentEl
+ * @param fileId
+ * @param faultyPages
+ * @returns {*}
+ */
+const addInternalLinks = (contentEl, fileId, faultyPages) => {
+    let newContent;
 
-const addInternalLinks = () => {
+    //const contentEl = htmlParser.parse(data);
+
+    // This must be called AFTER cleaning all the active links.
+    if(contentEl.querySelectorAll("a").length > 0) return;
+
+    const contentBeforeUpdate = contentEl.innerText.trim();
+
+    newContent = contentEl.outerHTML;
+
+    masterIndex.forEach(contentInfo => {
+        if (!contentInfo.id || contentInfo.id === fileId) return;
+        if(contentInfo.code.split(".").length !== 5) return;
+
+        const internalLink = `<a href="/content/${contentInfo.id}" title="${contentInfo.title}">${contentInfo.code}</a>`
+
+        const code = contentInfo.code.replace(/\./g, "\\.");
+
+        let regex = new RegExp("\\b" + code, "g"); // escape the dot with a backslash
+
+        newContent = newContent.replace(regex, internalLink);
+    });
+
+    const contentElAfterUpdate = htmlParser.parse(newContent);
+
+    const contentAfterUpdate = contentElAfterUpdate.innerText.trim();
+
+    if(contentAfterUpdate !== contentBeforeUpdate) {
+        if(faultyPages.length === 6) {
+            console.log({contentAfterUpdate, contentBeforeUpdate})
+        }
+        faultyPages.push(fileId);
+    }
+
+    return htmlParser.parse(newContent);
+}
+
+
+const addInternalLinksToAllPages = () => {
     const faultyPages = [];
     let updatedFileCount = 0;
 
@@ -175,34 +249,15 @@ const addInternalLinks = () => {
         files.forEach((file, index) => {
             const id = file.replace(".html", ""); // remove the .html extension
             const filePath = `views/content/${file}`;
-            let newContent;
+
             fs.readFile(filePath, { encoding: "utf-8" }, (err, data) => {
                 if (err) {
                     console.error(err);
                     return;
                 }
 
-                const contentBeforeUpdate = htmlParser.parse(data).innerText.trim();
-
-                newContent = data;
-
-                masterIndex.forEach(contentInfo => {
-                    if (!contentInfo.id || contentInfo.id === id) return;
-                    if(contentInfo.code.split(".").length !== 5) return;
-
-                    const internalLink = `<a href="/content/${contentInfo.id}" title="${contentInfo.title}">${contentInfo.code}</a>`
-
-                    newContent = newContent.replaceAll(contentInfo.code, internalLink);
-                });
-
-                const contentAfterUpdate = htmlParser.parse(newContent).innerText.trim();
-
-                if(contentAfterUpdate !== contentBeforeUpdate) {
-                    if(faultyPages.length === 6) {
-                        console.log({contentAfterUpdate, contentBeforeUpdate})
-                    }
-                    faultyPages.push(id);
-                }
+                const contentEl = htmlParser.parse(data);
+                let newContent = addInternalLinks(contentEl, id, faultyPages);
 
                 fs.writeFile(filePath, newContent, (err) => {
                     if (err) {
@@ -223,4 +278,4 @@ const addInternalLinks = () => {
     });
 }
 
-// addInternalLinks();
+// addInternalLinksToAllPages();
