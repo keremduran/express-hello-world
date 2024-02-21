@@ -161,9 +161,27 @@
     }
 
     document.body.addEventListener('htmx:afterSwap', function(e) {
-        highlightSearchValue();
-        pushToHistory(e);
-        setBackToSectionLink(e);
+
+        try {
+            highlightSearchValue();
+        }
+        catch (err) {
+            console.error(err);
+        }
+
+        try {
+            pushToHistory(e);
+        }
+        catch (err) {
+            console.error(err);
+        }
+
+        try {
+            setBackToSectionLink(e);
+        }
+        catch (err) {
+            console.error(err);
+        }
     });
 
     function setBackToSectionLink() {
