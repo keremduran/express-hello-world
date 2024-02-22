@@ -137,7 +137,7 @@ exports.cleanAllContent = (req, res) => {
 exports.scrape = (req, res) => {
     console.log("SCRAPING")
     const allowOverride = false;
-    let allowScrape = true;
+    let allowScrape = false;
     if (!allowScrape) return;
 
     const faultyPages = [];
