@@ -28,6 +28,14 @@
         }
     </style>
 </head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-QFSSNXMCVC"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-QFSSNXMCVC');
+</script>
 <body id="top" hx-boost="true" hx-target=".content" hx-swap="outerHTML show:#history-section:top" hx-push-url="true">
 
 <!-- Top Background Image Wrapper -->
@@ -162,6 +170,17 @@
 
     document.body.addEventListener('htmx:afterSwap', function(e) {
 
+        try {
+            gtag('event', 'page_view', {
+                page_title: window.location.pathname.replaceAll("/", "_"),
+                page_location: window.location.href,
+                page_path: window.location.pathname,
+                send_to: 'G-QFSSNXMCVC'
+            })
+        } catch (error) {
+            console.error(error);
+        }
+        
         try {
             highlightSearchValue();
         }
